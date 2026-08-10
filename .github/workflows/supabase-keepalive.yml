@@ -1,1 +1,16 @@
+name: Supabase Keepalive
 
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query Supabase
+        run: |
+          curl -s "${{ secrets.SUPABASE_URL }}/rest/v1/" \
+            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+            -w "\nStatus: %{http_code}\n"
