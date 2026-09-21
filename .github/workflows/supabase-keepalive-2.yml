@@ -9,9 +9,11 @@ jobs:
   keepalive:
     runs-on: ubuntu-latest
     steps:
-          - name: Query Supabase 2
+      - name: Query Supabase 2
         run: |
-          URL="${{ secrets.SUPABASE_URL_2 }}/rest/v1/rawmat_history?select=id&limit=1"
-          curl -s "$URL" \
-            -H "apikey: ${{ secrets.SUPABASE_KEY_2 }}" \
+          curl -s "${SUPABASE_URL}/rest/v1/rawmat_history?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_KEY}" \
             -w "\nStatus: %{http_code}\n"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL_2 }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY_2 }}
