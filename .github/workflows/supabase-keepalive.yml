@@ -11,6 +11,9 @@ jobs:
     steps:
       - name: Query Supabase
         run: |
-          curl -s "${{ secrets.SUPABASE_URL }}/rest/v1/" \
-            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+          curl -s "${SUPABASE_URL}/rest/v1/app_storage?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_KEY}" \
             -w "\nStatus: %{http_code}\n"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
