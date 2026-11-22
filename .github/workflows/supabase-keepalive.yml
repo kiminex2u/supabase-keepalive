@@ -2,18 +2,44 @@ name: Supabase Keepalive
 
 on:
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '0 3 * * *'      # 매일 03:00 UTC (한국 12:00)
   workflow_dispatch:
+
+# 저장소에 기록 파일을 커밋하기 위한 쓰기 권한
+permissions:
+  contents: write
 
 jobs:
   keepalive:
     runs-on: ubuntu-latest
     steps:
+      # 1) Supabase 호출 → 7일 미사용 일시정지 방지
+      #    실패(4xx/5xx) 시 워크플로가 실패 처리되어 GitHub 알림 메일이 옵니다.
       - name: Query Supabase
         run: |
-          curl -s "${SUPABASE_URL}/rest/v1/app_storage?select=id&limit=1" \
+          curl -sS --fail-with-body "${SUPABASE_URL}/rest/v1/app_storage?select=id&limit=1" \
             -H "apikey: ${SUPABASE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_KEY}" \
             -w "\nStatus: %{http_code}\n"
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+      # 2) 저장소 체크아웃 (커밋용)
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 3) 매월 1일·15일에 기록 파일 커밋 → GitHub 60일 미활동 자동 비활성화 방지
+      - name: Keep repository active
+        run: |
+          DAY=$(date -u +%d)
+          if [ "$DAY" != "01" ] && [ "$DAY" != "15" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "오늘은 커밋하지 않습니다 (매월 1일·15일만 커밋)"; exit 0
+          fi
+          mkdir -p .keepalive
+          date -u '+%Y-%m-%d %H:%M:%S UTC' > .keepalive/last_ping.txt
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .keepalive/last_ping.txt
+          git commit -m "chore: keepalive $(date -u +%Y-%m-%d)" || echo "변경 없음"
+          git push
