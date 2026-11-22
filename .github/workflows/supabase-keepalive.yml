@@ -17,9 +17,8 @@ jobs:
       #    실패(4xx/5xx) 시 워크플로가 실패 처리되어 GitHub 알림 메일이 옵니다.
       - name: Query Supabase
         run: |
-          curl -sS --fail-with-body "${SUPABASE_URL}/rest/v1/app_storage?select=id&limit=1" \
+          curl -sS --fail-with-body "${SUPABASE_URL}/rest/v1/app_storage?select=key&limit=1" \
             -H "apikey: ${SUPABASE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_KEY}" \
             -w "\nStatus: %{http_code}\n"
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -41,5 +40,9 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .keepalive/last_ping.txt
-          git commit -m "chore: keepalive $(date -u +%Y-%m-%d)" || echo "변경 없음"
-          git push
+          git commit -m "chore: keepalive $(date -u +%Y-%m-%d)" || { echo "변경 없음"; exit 0; }
+          for i in 1 2 3; do
+            git pull --rebase && git push && exit 0
+            echo "push 재시도 $i"; sleep 15
+          done
+          exit 1
